@@ -1,17 +1,19 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 3000;
-//2Mq6FIhWDHFlayAK
-//islamtariqul652
+const morgan = require('morgan')
+require('dotenv').config()
+const { MongoClient, ServerApiVersion } = require('mongodb');
 
 // middleware
 app.use(cors())
 app.use(express.json())
+app.use(morgan('dev'))
 
 
-const uri = `mongodb+srv://islamtariqul652:2Mq6FIhWDHFlayAK@cluster1.s9b74mm.mongodb.net/?retryWrites=true&w=majority`;
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.setnbur.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -27,30 +29,29 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
-    const database = client.db("LanguageDB");
-    const userCollection = database.collection("user");
+    const database = client.db("DetailsDB");
     const classCollection = database.collection("class");
+    const userCollection = database.collection("user");
 
+    app.get('/class', async (req, res)=>{
 
-    app.put('/regUser', async(req, res)=>{
-        const regUser = req.body.email
-        console.log(regUser);
-        const result = await userCollection.insertOne(regUser)
-        res.send(result)
+      const result = await classCollection.find().toArray()
+      res.send(result)
     })
 
 
-
-
-
-
-
-
-
-
-
-
-
+    app.put('/users/:email', async(req, res)=>{
+      const email = req.params.email 
+      const user = req.body
+      const query={email: email}
+      const option = {upsert: true }
+      const updateDoc = {
+        $set: user
+      }
+      console.log(user)
+      const result = await userCollection.updateOne(query,updateDoc,option)
+      res.send(result)
+    } )
 
 
 
@@ -64,7 +65,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
 
 
 app.get('/', (req, res)=>{
