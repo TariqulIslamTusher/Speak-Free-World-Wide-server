@@ -4,7 +4,7 @@ const cors = require('cors')
 const port = process.env.PORT || 3000;
 const morgan = require('morgan')
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
 app.use(cors())
@@ -33,25 +33,69 @@ async function run() {
     const classCollection = database.collection("class");
     const userCollection = database.collection("user");
 
-    app.get('/class', async (req, res)=>{
 
-      const result = await classCollection.find().toArray()
-      res.send(result)
+    // get all the data from classCollection & sort data of popular class by query searching
+    app.get('/class', async (req, res) => {
+      var query = {}
+      if (req.query) {
+        query = req.query
+        // console.log(query);
+        const result = await classCollection.find().sort({ classView: -1 }).toArray()
+        res.send(result)
+      } else {
+        const result = await classCollection.find().toArray()
+        res.send(result)
+      }
     })
 
+    // get the data to sort the popular instructions
+    app.get('/instructor', async (req, res) => {
+      const result = await classCollection.find().sort({attendedStudent: -1}).toArray()
+      res.send(result)
 
-    app.put('/users/:email', async(req, res)=>{
-      const email = req.params.email 
-      const user = req.body
-      const query={email: email}
-      const option = {upsert: true }
+    })
+
+    //  set the email and role by put methods in the userCollection
+    app.put('/users/:email', async (req, res) => {
+      const email = req.params.email
+      let user = req.body
+      if(email === 'islamtariqul652@gmail.com' || email === 'islamtariqul@gmail.com'){
+        user.role = "admin"
+      }
+      const query = { email: email }
+      const option = { upsert: true }
+      console.log(user);
       const updateDoc = {
         $set: user
       }
-      console.log(user)
-      const result = await userCollection.updateOne(query,updateDoc,option)
+      const result = await userCollection.updateOne(query, updateDoc, option)
       res.send(result)
-    } )
+    })
+
+    // get the data by single email to show on database matching the user email
+    app.get('/users', async (req, res) => {
+      let query = {}
+      if(req.query.email){
+        query = req.query
+      }
+      console.log(query)
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // change the user role from user to admin or instructor 
+    app.patch('/users/:id', async (req, res) => {
+      const id = req.params.id 
+      const filter = { _id : new ObjectId(id)}
+      const user = req.body
+      const option = {upsert: true}
+      const updateDoc = {
+        $set: user
+      }
+      console.log(filter, user);
+      const result = await userCollection.updateOne(filter, updateDoc, option)
+      res.send(result)
+    })
 
 
 
@@ -67,10 +111,10 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (req, res)=>{
-    res.send('speak free to world is running')
+app.get('/', (req, res) => {
+  res.send('speak free to world is running')
 })
 
-app.listen(port, ()=>{
-    console.log(`server is running on port ${port}`);
+app.listen(port, () => {
+  console.log(`server is running on port ${port}`);
 })
