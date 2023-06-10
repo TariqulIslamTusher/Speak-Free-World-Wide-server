@@ -29,37 +29,99 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
 
+    // user database and collection is here
     const database = client.db("DetailsDB");
     const classCollection = database.collection("class");
     const userCollection = database.collection("user");
 
+    // =================GET METHODE============================
 
     // get all the data from classCollection & sort data of popular class by query searching
-    app.get('/class', async (req, res) => {
-      var query = {}
-      if (req.query.email) {
-        query = req.query
-        // console.log(query);
-        const result = await classCollection.find().sort({ classView: -1 }).toArray()
-        res.send(result)
-      } else if (req.query) {
-        query = req.query
-        console.log(query);
-        const result = await classCollection.find(query).toArray()
-        res.send(result)
-      } else {
-        const result = await classCollection.find().toArray()
-        res.send(result)
-      }
-    })
+    // query email & query search implemented here 
+    // app.get('/class', async (req, res) => {
+    //   var query = {}
 
+
+    //   if (req.query.email) {
+    //     query = req.query
+    //     // console.log(query);
+    //     const result = await classCollection.find().sort({ classView: -1 }).toArray()
+    //     res.send(result)
+    //   } else {
+    //     const result = await classCollection.find().toArray()
+    //     res.send(result)
+    //   }
+    // })
+
+    // this get is implemented only to sort the instructors
     // get the data to sort the popular instructions
-    app.get('/instructor', async (req, res) => {
-      const result = await classCollection.find().sort({ attendedStudent: -1 }).toArray()
-      res.send(result)
+    app.get('/class', async (req, res) => {
+      let options = {}
+      let query = {}
 
+      const filter = req.query
+      const sort = req.query.sort
+
+      if (filter && sort === 'classView') {
+        options = {
+          sort: { 'classView': -1 }
+        }
+      }
+
+      if (req.query) {
+        query = req.query
+      }
+
+      if (req.query && req.query.email) {
+
+        query = { instructorEmail: req.query.email }
+      }
+
+
+      if (req.query && req.query.classStatus === 'approved') {
+        query = { classStatus: req.query.classStatus }
+      }
+
+      if (sort && sort === 'attendedStudent') {
+        options = {
+          sort: { "attendedStudent": -1 }
+        }
+      }
+      if (sort && sort === 'classView') {
+        options = {
+          sort: { "classView": -1 }
+        }
+      }
+
+
+      const result = await classCollection.find(query, options).toArray()
+      res.send(result)
     })
 
+    // get the data to see all user in tabular form
+    app.get('/users', async (req, res) => {
+      let query = {}
+      if (req.query) {
+        query = req.query
+      }
+      console.log(query, 'tabular user')
+      const result = await userCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    // =================POST METHODE  ============================
+
+    // set the add new data by instructor to db 
+    app.post('/class', async (req, res) => {
+      const doc = req.body
+      console.log(doc , 'set new data')
+      const result = await classCollection.insertOne(doc);
+      res.send(result)
+    })
+
+
+
+    // =================PUT METHODE / UPDATE METHODE ============================
     //  set the email and role by put methods in the userCollection
     app.put('/users/:email', async (req, res) => {
       const email = req.params.email
@@ -69,7 +131,7 @@ async function run() {
       }
       const query = { email: email }
       const option = { upsert: true }
-      console.log(user);
+      console.log(user, 'user to database');
       const updateDoc = {
         $set: user
       }
@@ -77,28 +139,36 @@ async function run() {
       res.send(result)
     })
 
-    // get the data by single email to show on database matching the user email
-    app.get('/users', async (req, res) => {
-      let query = {}
-      if (req.query) {
-        query = req.query
-      }
-      console.log(query)
-      const result = await userCollection.find(query).toArray()
-      res.send(result)
-    })
 
+
+    // =================PATCH METHODE============================
     // change the user role from user to admin or instructor 
     app.patch('/users/:id', async (req, res) => {
       const id = req.params.id
       const filter = { _id: new ObjectId(id) }
       const user = req.body
+      console.log(user, 'approved deny');
       const option = { upsert: true }
       const updateDoc = {
         $set: user
       }
-      console.log(filter, user);
+
       const result = await userCollection.updateOne(filter, updateDoc, option)
+      res.send(result)
+    })
+
+
+    // change the class status of approve or deny
+    app.patch('/class/:id', async (req, res) => {
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
+      const user = req.body
+      console.log(user, 'approved deny');
+      const options = {upsert: true}
+      const updateDoc = {
+        $set: user
+      }
+      const result = await classCollection.updateOne(filter, updateDoc, options)
       res.send(result)
     })
 
