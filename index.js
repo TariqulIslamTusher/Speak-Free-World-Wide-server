@@ -37,10 +37,15 @@ async function run() {
     // get all the data from classCollection & sort data of popular class by query searching
     app.get('/class', async (req, res) => {
       var query = {}
-      if (req.query) {
+      if (req.query.email) {
         query = req.query
         // console.log(query);
         const result = await classCollection.find().sort({ classView: -1 }).toArray()
+        res.send(result)
+      } else if (req.query) {
+        query = req.query
+        console.log(query);
+        const result = await classCollection.find(query).toArray()
         res.send(result)
       } else {
         const result = await classCollection.find().toArray()
@@ -50,7 +55,7 @@ async function run() {
 
     // get the data to sort the popular instructions
     app.get('/instructor', async (req, res) => {
-      const result = await classCollection.find().sort({attendedStudent: -1}).toArray()
+      const result = await classCollection.find().sort({ attendedStudent: -1 }).toArray()
       res.send(result)
 
     })
@@ -59,7 +64,7 @@ async function run() {
     app.put('/users/:email', async (req, res) => {
       const email = req.params.email
       let user = req.body
-      if(email === 'islamtariqul652@gmail.com' || email === 'islamtariqul@gmail.com'){
+      if (email === 'islamtariqul652@gmail.com' || email === 'islamtariqul@gmail.com') {
         user.role = "admin"
       }
       const query = { email: email }
@@ -75,7 +80,7 @@ async function run() {
     // get the data by single email to show on database matching the user email
     app.get('/users', async (req, res) => {
       let query = {}
-      if(req.query.email){
+      if (req.query) {
         query = req.query
       }
       console.log(query)
@@ -85,10 +90,10 @@ async function run() {
 
     // change the user role from user to admin or instructor 
     app.patch('/users/:id', async (req, res) => {
-      const id = req.params.id 
-      const filter = { _id : new ObjectId(id)}
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
       const user = req.body
-      const option = {upsert: true}
+      const option = { upsert: true }
       const updateDoc = {
         $set: user
       }
