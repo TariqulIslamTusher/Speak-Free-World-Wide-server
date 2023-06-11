@@ -7,10 +7,15 @@ require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // middleware
-app.use(cors())
+const corsConfig = {
+  origin: '*',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
+}
+// app.use(cors())
+app.use(cors(corsConfig))
+// PushSubscriptionOptions("", cors(corsConfig))
 app.use(express.json())
-app.use(morgan('dev'))
-
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.setnbur.mongodb.net/?retryWrites=true&w=majority`;
@@ -33,6 +38,7 @@ async function run() {
     const database = client.db("DetailsDB");
     const classCollection = database.collection("class");
     const userCollection = database.collection("user");
+    const bookingCollection = database.collection("myBookings")
 
     // =================GET METHODE============================
 
@@ -111,6 +117,15 @@ async function run() {
       res.send(result)
     })
 
+
+
+
+
+
+
+
+
+
     // =================POST METHODE  ============================
 
     // set the add new data by instructor to db 
@@ -120,6 +135,19 @@ async function run() {
       const result = await classCollection.insertOne(doc);
       res.send(result)
     })
+
+
+    // set the booked data from the card sectionssss 
+    app.post('/booking', async (req, res) => {
+      // const query = {_id : new ObjectId(id)}
+      const doc = req.body
+      console.log(doc)
+      const result = await bookingCollection.insertOne(doc);
+      res.send(result)
+    })
+
+
+
 
 
 
