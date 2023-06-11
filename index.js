@@ -55,6 +55,13 @@ async function run() {
 
     // this get is implemented only to sort the instructors
     // get the data to sort the popular instructions
+    app.get('/class/:id', async(req,res)=>{
+      const id = req.params.id 
+      const query = {_id : new ObjectId(id)}
+      const result = await classCollection.findOne(query)
+      res.send(result)
+    })
+
     app.get('/class', async (req, res) => {
       let options = {}
       let query = {}
@@ -62,18 +69,11 @@ async function run() {
       const filter = req.query
       const sort = req.query.sort
 
-      if (filter && sort === 'classView') {
-        options = {
-          sort: { 'classView': -1 }
-        }
-      }
-
       if (req.query) {
         query = req.query
       }
 
       if (req.query && req.query.email) {
-
         query = { instructorEmail: req.query.email }
       }
 
@@ -87,10 +87,12 @@ async function run() {
           sort: { "attendedStudent": -1 }
         }
       }
-      if (sort && sort === 'classView') {
+      if (filter && sort === 'classView') {
         options = {
-          sort: { "classView": -1 }
+          sort: { 'classView': -1 }
         }
+        // const result = await classCollection.find().sort({ classView: -1 }).toArray()
+        // return res.send(result)
       }
 
 
@@ -114,7 +116,7 @@ async function run() {
     // set the add new data by instructor to db 
     app.post('/class', async (req, res) => {
       const doc = req.body
-      console.log(doc , 'set new data')
+      console.log(doc, 'set new data')
       const result = await classCollection.insertOne(doc);
       res.send(result)
     })
@@ -162,11 +164,11 @@ async function run() {
     app.patch('/class/:id', async (req, res) => {
       const id = req.params.id
       const filter = { _id: new ObjectId(id) }
-      const user = req.body
-      console.log(user, 'approved deny');
-      const options = {upsert: true}
+      const classData = req.body
+      console.log(classData, 'update data.............');
+      const options = { upsert: true }
       const updateDoc = {
-        $set: user
+        $set: classData
       }
       const result = await classCollection.updateOne(filter, updateDoc, options)
       res.send(result)
