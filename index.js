@@ -118,6 +118,19 @@ async function run() {
     })
 
 
+    // get THE MY BOOKED DATA BY GET METHODE 
+    app.get('/booking', async(req, res) =>{
+      let query = {}
+      const email = req.query.email 
+      if(email){
+        query= {userEmail: email}
+      }
+      result = await bookingCollection.find(query).toArray()
+      res.send(result)
+
+    })
+
+
 
 
 
@@ -145,6 +158,8 @@ async function run() {
       const result = await bookingCollection.insertOne(doc);
       res.send(result)
     })
+
+
 
 
 
