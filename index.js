@@ -6,7 +6,18 @@ const morgan = require('morgan')
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+
+
+
+// for stripe methode
+const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_SK)
+
 // middleware
+app.use(morgan('dev'))
+
+
+
+
 const corsConfig = {
   origin: '*',
   credentials: true,
@@ -39,6 +50,7 @@ async function run() {
     const classCollection = database.collection("class");
     const userCollection = database.collection("user");
     const bookingCollection = database.collection("myBookings")
+    const enrolledCollection = database.collection("myEnrolled")
 
     // =================GET METHODE============================
 
@@ -61,9 +73,9 @@ async function run() {
 
     // this get is implemented only to sort the instructors
     // get the data to sort the popular instructions
-    app.get('/class/:id', async(req,res)=>{
-      const id = req.params.id 
-      const query = {_id : new ObjectId(id)}
+    app.get('/class/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
       const result = await classCollection.findOne(query)
       res.send(result)
     })
@@ -119,11 +131,24 @@ async function run() {
 
 
     // get THE MY BOOKED DATA BY GET METHODE 
-    app.get('/booking', async(req, res) =>{
+    app.get('/booking', async (req, res) => {
       let query = {}
-      const email = req.query.email 
-      if(email){
-        query= {userEmail: email}
+      const email = req.query.email
+      if (email) {
+        query = { userEmail: email }
+      }
+      result = await bookingCollection.find(query).toArray()
+      res.send(result)
+
+    })
+
+
+    // No more trciky using another api  for email too
+    app.get('/booking', async (req, res) => {
+      let query = {}
+      const email = req.query.booked
+      if (booked) {
+        query = { booked: email }
       }
       result = await bookingCollection.find(query).toArray()
       res.send(result)
@@ -159,6 +184,32 @@ async function run() {
       res.send(result)
     })
 
+
+    // Set my enrolled item to database 
+
+    app.post('/myEnrolled', async(req, res)=>{
+      const doc = req.body 
+      // console.log(doc);
+      const result = await enrolledCollection.insertOne(doc)
+      res.send(result)
+    })
+
+
+    // CREATE PAYMENT INTEND FOR THE ONLINE PAYMENTS
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { total } = req.body;
+      // because you have to make the money into coin
+      const amount = parseFloat(total.toFixed(2)) * 100
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+
+      res.send({ clientSecret: paymentIntent.client_secret })
+
+    });
 
 
 
@@ -221,10 +272,20 @@ async function run() {
 
 
     // ==================DELETE METHODES==============
-    app.delete('/class/:id', async(req,res)=>{
-      const id = req.params.id 
-      const query = {_id : new ObjectId(id)}
+    app.delete('/class/:id', async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
       const result = await classCollection.deleteOne(query)
+      res.send(result)
+    })
+
+
+    //  Delete the booked item from the booking collection
+    app.delete('/booking/:id', async(req, res)=>{
+      const id = req.params.id 
+      const query = {prevId : id}
+      // console.log(query);
+      const result = await bookingCollection.deleteOne(query)
       res.send(result)
     })
 
