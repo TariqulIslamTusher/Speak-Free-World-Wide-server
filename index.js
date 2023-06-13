@@ -113,10 +113,10 @@ async function run() {
         // return res.send(result)
       }
 
-
       const result = await classCollection.find(query, options).toArray()
       res.send(result)
     })
+
 
     // get the data to see all user in tabular form
     app.get('/users', async (req, res) => {
@@ -128,6 +128,7 @@ async function run() {
       const result = await userCollection.find(query).toArray()
       res.send(result)
     })
+
 
 
     // get THE MY BOOKED DATA BY GET METHODE 
@@ -153,6 +154,17 @@ async function run() {
       result = await bookingCollection.find(query).toArray()
       res.send(result)
 
+    })
+
+
+    // get the data from enrolled database 
+    app.get('/enrolled', async(req,res)=>{
+      let email = req.query.email 
+      if(email){
+        query = {userEmail: email}
+      }
+      const result = await enrolledCollection.find().toArray()
+      res.send(result)
     })
 
 
@@ -288,6 +300,11 @@ async function run() {
       const result = await bookingCollection.deleteOne(query)
       res.send(result)
     })
+
+    //delete the full database of enrolled 
+    // app.delete('/enrolled', async(req, res)=>{
+    //   const result = await enrolledCollection.deleteMany()
+    // })
 
 
 
