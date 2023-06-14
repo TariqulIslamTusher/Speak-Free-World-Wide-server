@@ -165,6 +165,8 @@ async function run() {
       res.send(result)
     })
 
+
+
     app.get('/class', verifyJWT, async (req, res) => {
       let options = {}
       let query = {}
@@ -201,6 +203,9 @@ async function run() {
       const result = await classCollection.find(query, options).toArray()
       res.send(result)
     })
+
+
+
 
 
 
@@ -246,12 +251,13 @@ async function run() {
 
 
     // get the data from enrolled database 
-    app.get('/enrolled', verifyJWT, async (req, res) => {
-      let email = req.query.email
-      if (email) {
-        query = { userEmail: email }
+    app.get('/enrolled', async (req, res) => {
+      let query = {}
+      const email = req.query.email 
+      if(email){
+        query = {email: email}
       }
-      const result = await enrolledCollection.find().toArray()
+      const result = await enrolledCollection.find(query).toArray()
       res.send(result)
     })
 
@@ -299,7 +305,7 @@ async function run() {
     app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { total } = req.body;
       // because you have to make the money into coin
-      const amount = parseFloat(total.toFixed(2)) * 100
+      const amount = parseInt(total.toFixed(0)) * 100
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'usd',
@@ -366,6 +372,21 @@ async function run() {
       const result = await classCollection.updateOne(filter, updateDoc, options)
       res.send(result)
     })
+
+
+    // // change the class status of approve or deny
+    // app.patch('/bookyourclass/:id', verifyJWT, async (req, res) => {
+    //   const id = req.params.id
+    //   const filter = { _id: new ObjectId(id) }
+    //   const classData = req.body
+    //   console.log(classData, 'update data.............');
+    //   const options = { upsert: true }
+    //   const updateDoc = {
+    //     $set: classData
+    //   }
+    //   const result = await classCollection.updateOne(filter, updateDoc, options)
+    //   res.send(result)
+    // })
 
 
 
