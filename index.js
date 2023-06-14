@@ -3,6 +3,9 @@ const app = express()
 const cors = require('cors')
 const port = process.env.PORT || 3000;
 const morgan = require('morgan')
+// jwt 
+const jwt = require('jsonwebtoken')
+
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
@@ -15,9 +18,6 @@ const stripe = require('stripe')(process.env.PAYMENT_GATEWAY_SK)
 // middleware
 app.use(morgan('dev'))
 
-
-
-
 const corsConfig = {
   origin: '*',
   credentials: true,
@@ -27,6 +27,30 @@ const corsConfig = {
 app.use(cors(corsConfig))
 // PushSubscriptionOptions("", cors(corsConfig))
 app.use(express.json())
+
+
+
+// middleware function for validate jwt
+
+const verifyJWT = async (req, res, next) => {
+  const authorization = await req.headers.authorization
+  if (!authorization) {
+    return res.status(400).send({ error: true, message: "Forbidden Access" })
+  }
+  // token verifying 
+  const token = authorization.split(' ')[1]
+  console.log(token, 'working');
+
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res.status(401).send({ error: true, message: "Unauthorize Access" })
+    }
+
+    req.decoded = decoded
+    next()
+  })
+
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.setnbur.mongodb.net/?retryWrites=true&w=majority`;
@@ -54,6 +78,65 @@ async function run() {
 
     // =================GET METHODE============================
 
+
+    // temop post 
+    app.post('/jwt', async (req, res) => {
+      const email = req.body
+      // console.log(email);
+      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      // console.log(email, "token", token)
+
+      res.send({ token })
+
+    })
+
+
+    // for non verifying data 
+    // for getting all instructor 
+    app.get('/ourTopInst', async (req, res) => {
+      const filter = { classStatus: 'approved' }
+      const options = {
+        sort: { "attendedStudent": -1 }
+      }
+      const result = await classCollection.find(filter, options).toArray()
+      res.send(result)
+    })
+
+    // for the class sorting upon classview
+    app.get('/classView', async (req, res) => {
+      const filter = { classStatus: 'approved' }
+      const options = {
+        sort: { "classView": -1 }
+      }
+      const result = await classCollection.find(filter, options).toArray()
+      res.send(result)
+    })
+
+
+    app.get('/onlyclass', async (req, res) => {
+      let query
+      const filter = req.query
+      if (filter) {
+        query = filter
+      }
+      const result = await classCollection.find(query).toArray()
+      res.send(result)
+    })
+
+
+    // get THE MY BOOKED DATA BY GET METHODE 
+    app.get('/isbooking', async (req, res) => {
+      let query = {}
+      const filter = req.query
+      if (filter) {
+        query = filter
+      }
+      console.log(query);
+      result = await bookingCollection.find(query).toArray()
+      res.send(result)
+
+    })
+
     // get all the data from classCollection & sort data of popular class by query searching
     // query email & query search implemented here 
     // app.get('/class', async (req, res) => {
@@ -72,6 +155,8 @@ async function run() {
     // })
 
     // this get is implemented only to sort the instructors
+
+
     // get the data to sort the popular instructions
     app.get('/class/:id', async (req, res) => {
       const id = req.params.id
@@ -80,7 +165,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/class', async (req, res) => {
+    app.get('/class', verifyJWT, async (req, res) => {
       let options = {}
       let query = {}
 
@@ -118,6 +203,9 @@ async function run() {
     })
 
 
+
+
+
     // get the data to see all user in tabular form
     app.get('/users', async (req, res) => {
       let query = {}
@@ -132,7 +220,7 @@ async function run() {
 
 
     // get THE MY BOOKED DATA BY GET METHODE 
-    app.get('/booking', async (req, res) => {
+    app.get('/booking', verifyJWT, async (req, res) => {
       let query = {}
       const email = req.query.email
       if (email) {
@@ -158,10 +246,10 @@ async function run() {
 
 
     // get the data from enrolled database 
-    app.get('/enrolled', async(req,res)=>{
-      let email = req.query.email 
-      if(email){
-        query = {userEmail: email}
+    app.get('/enrolled', verifyJWT, async (req, res) => {
+      let email = req.query.email
+      if (email) {
+        query = { userEmail: email }
       }
       const result = await enrolledCollection.find().toArray()
       res.send(result)
@@ -179,7 +267,7 @@ async function run() {
     // =================POST METHODE  ============================
 
     // set the add new data by instructor to db 
-    app.post('/class', async (req, res) => {
+    app.post('/class', verifyJWT, async (req, res) => {
       const doc = req.body
       console.log(doc, 'set new data')
       const result = await classCollection.insertOne(doc);
@@ -187,7 +275,7 @@ async function run() {
     })
 
 
-    // set the booked data from the card sectionssss 
+    // set the booked data from the :::::::::card sectionssss 
     app.post('/booking', async (req, res) => {
       // const query = {_id : new ObjectId(id)}
       const doc = req.body
@@ -198,9 +286,8 @@ async function run() {
 
 
     // Set my enrolled item to database 
-
-    app.post('/myEnrolled', async(req, res)=>{
-      const doc = req.body 
+    app.post('/myEnrolled', verifyJWT, async (req, res) => {
+      const doc = req.body
       // console.log(doc);
       const result = await enrolledCollection.insertOne(doc)
       res.send(result)
@@ -209,7 +296,7 @@ async function run() {
 
     // CREATE PAYMENT INTEND FOR THE ONLINE PAYMENTS
 
-    app.post("/create-payment-intent", async (req, res) => {
+    app.post("/create-payment-intent", verifyJWT, async (req, res) => {
       const { total } = req.body;
       // because you have to make the money into coin
       const amount = parseFloat(total.toFixed(2)) * 100
@@ -251,11 +338,11 @@ async function run() {
 
     // =================PATCH METHODE============================
     // change the user role from user to admin or instructor 
-    app.patch('/users/:id', async (req, res) => {
+    app.patch('/users/:id', verifyJWT, async (req, res) => {
       const id = req.params.id
       const filter = { _id: new ObjectId(id) }
       const user = req.body
-      console.log(user, 'approved deny');
+      // console.log(user, 'approved deny');
       const option = { upsert: true }
       const updateDoc = {
         $set: user
@@ -267,7 +354,7 @@ async function run() {
 
 
     // change the class status of approve or deny
-    app.patch('/class/:id', async (req, res) => {
+    app.patch('/class/:id', verifyJWT, async (req, res) => {
       const id = req.params.id
       const filter = { _id: new ObjectId(id) }
       const classData = req.body
@@ -284,7 +371,7 @@ async function run() {
 
 
     // ==================DELETE METHODES==============
-    app.delete('/class/:id', async (req, res) => {
+    app.delete('/class/:id', verifyJWT, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await classCollection.deleteOne(query)
@@ -293,9 +380,9 @@ async function run() {
 
 
     //  Delete the booked item from the booking collection
-    app.delete('/booking/:id', async(req, res)=>{
-      const id = req.params.id 
-      const query = {prevId : id}
+    app.delete('/booking/:id', verifyJWT, async (req, res) => {
+      const id = req.params.id
+      const query = { prevId: id }
       // console.log(query);
       const result = await bookingCollection.deleteOne(query)
       res.send(result)
