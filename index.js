@@ -5,7 +5,7 @@ const port = process.env.PORT || 3000;
 const morgan = require('morgan')
 // jwt 
 const jwt = require('jsonwebtoken')
-
+// dotenv file added
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
@@ -53,6 +53,7 @@ const verifyJWT = async (req, res, next) => {
 }
 
 
+
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.setnbur.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -76,6 +77,7 @@ async function run() {
     const bookingCollection = database.collection("myBookings")
     const enrolledCollection = database.collection("myEnrolled")
 
+    
     // =================GET METHODE============================
 
 
